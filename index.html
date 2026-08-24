@@ -39,7 +39,7 @@
         }
       }
       .wave-bar {
-        animation: wave 1.2s ease infinite;
+        transition: height 0.1s ease;
       }
       .wave-bar:nth-child(2) {
         animation-delay: 0.2s;
@@ -152,7 +152,7 @@
               </div>
             </div>
 
-            <div class="flex-grow">
+            <div class="flex-grow truncate">
               <h2 id="now-playing-title" class="text-lg font-semibold truncate">
                 No song selected
               </h2>
@@ -352,6 +352,15 @@
         const volumeUpBtn = document.getElementById("volume-up");
         const waveform = document.getElementById("waveform");
 
+        const songMenuOptions = [
+          {
+            label: "Delete this song",
+            icon: "fas fa-trash-alt",
+            danger: true,
+            action: (index) => deleteSingleSong(index),
+          },
+        ];
+
         // Initialize the app
         init();
 
@@ -409,13 +418,20 @@
         function visualize() {
           if (!analyser) return;
 
+          // Jika lagu sedang di-pause / tidak diputar, reset tinggi spektrum ke 0 / default
+          if (!isPlaying) {
+            const bars = waveform.querySelectorAll(".wave-bar");
+            bars.forEach((bar) => {
+              bar.style.height = "10px"; // Kembalikan ke tinggi dasar
+            });
+            return; // Hentikan loop animasi
+          }
+
           analyser.getByteFrequencyData(dataArray);
 
-          // Clear previous waveform
+          // Re-draw waveform berdasarkan data audio
           waveform.innerHTML = "";
-
-          // Create new bars based on frequency data
-          for (let i = 0; i < 5; i++) {
+          for (let i = 0; i < 10; i++) {
             const value = dataArray[i] || 0;
             const height = (value / 255) * 50 + 5;
             const bar = document.createElement("div");
@@ -425,9 +441,8 @@
             waveform.appendChild(bar);
           }
 
-          if (isPlaying) {
-            requestAnimationFrame(visualize);
-          }
+          // Lanjutkan loop animasi selama lagu diputar
+          requestAnimationFrame(visualize);
         }
 
         function setupEventListeners() {
@@ -475,39 +490,49 @@
           const files = e.target.files;
           if (!files.length) return;
 
-          for (let i = 0; i < files.length; i++) {
-            const file = files[i];
+          // 1. Tampilkan spinner secara manual SEBELUM pemrosesan berat
+          showLoading();
 
-            // Cek jika lagu dengan nama yang sama sudah ada
-            if (songs.some((song) => song.name === file.name)) {
-              continue;
+          // 2. Beri jeda 50ms agar browser sempat meng-render spinner ke layar
+          await new Promise((resolve) => setTimeout(resolve, 50));
+
+          try {
+            for (let i = 0; i < files.length; i++) {
+              const file = files[i];
+
+              // Cek duplikasi nama
+              if (songs.some((song) => song.name === file.name)) {
+                continue;
+              }
+
+              const songData = {
+                name: file.name,
+                file: file,
+              };
+
+              // Simpan ke IndexedDB (Proses berat terjadi di sini)
+              const newId = await saveSongToDB(songData);
+
+              songData.id = newId;
+              songData.url = URL.createObjectURL(file);
+
+              songs.push(songData);
             }
 
-            const songData = {
-              name: file.name,
-              file: file, // Objek File disimpan langsung sebagai Blob di IndexedDB
-            };
+            // Update UI daftar lagu
+            updateSongList();
 
-            // Simpan ke IndexedDB dan dapatkan ID-nya
-            const newId = await saveSongToDB(songData);
-
-            // Buat Blob URL sementara untuk runtime memori
-            songData.id = newId;
-            songData.url = URL.createObjectURL(file);
-
-            songs.push(songData);
+            // Jika belum ada lagu yang diputar, putar lagu pertama
+            if (currentSongIndex === -1 && songs.length > 0) {
+              playSong(0);
+            }
+          } catch (error) {
+            console.error("Gagal mengunggah file:", error);
+          } finally {
+            // 3. Sembunyikan spinner setelah semua proses upload & simpan selesai
+            hideLoading();
+            e.target.value = "";
           }
-
-          // Update UI
-          updateSongList();
-
-          // Jika belum ada lagu yang diputar, putar lagu pertama
-          if (currentSongIndex === -1 && songs.length > 0) {
-            playSong(0);
-          }
-
-          // Reset input file
-          e.target.value = "";
         }
 
         // Helper function untuk menampilkan spinner
@@ -527,12 +552,12 @@
         function updateSongList() {
           if (songs.length === 0) {
             songList.innerHTML = `
-                              <div class="p-4 text-center text-slate-400">
-                                  <i class="fas fa-music text-3xl mb-2"></i>
-                                  <p>No songs in your library</p>
-                                  <p class="text-sm mt-2">Click "Add Music" to upload your songs</p>
-                              </div>
-                          `;
+      <div class="p-4 text-center text-slate-400">
+          <i class="fas fa-music text-3xl mb-2"></i>
+          <p>No songs in your library</p>
+          <p class="text-sm mt-2">Click "Add Music" to upload your songs</p>
+      </div>
+    `;
             songCount.textContent = "0 songs";
             return;
           }
@@ -544,29 +569,36 @@
 
           songs.forEach((song, index) => {
             const songElement = document.createElement("div");
-            songElement.className = `flex items-center p-3 hover:bg-slate-700 cursor-pointer transition-colors ${
+            songElement.className = `flex items-center p-3 hover:bg-slate-700 cursor-pointer transition-colors song-item ${
               currentSongIndex === index ? "bg-slate-700" : ""
             }`;
-            songElement.innerHTML = `
-                              <div class="w-10 h-10 rounded bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center mr-3">
-                                  <i class="fas fa-music text-white"></i>
-                              </div>
-                              <div class="flex-grow min-w-0">
-                                  <h3 class="font-medium truncate">${song.name.replace(
-                                    /\.[^/.]+$/,
-                                    ""
-                                  )}</h3>
-                                  <p class="text-xs text-slate-400 truncate">Local file</p>
-                              </div>
-                              <div class="text-slate-400">
-                                  <i class="fas fa-ellipsis-h"></i>
-                              </div>
-                          `;
 
+            songElement.innerHTML = `
+      <div class="w-10 h-10 rounded bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center mr-3 flex-shrink-0">
+          <i class="fas fa-music text-white"></i>
+      </div>
+      <div class="flex-grow min-w-0 mr-2">
+          <h3 class="font-medium">${song.name.replace(/\.[^/.]+$/, "")}</h3>
+          <p class="text-xs text-slate-400">Local file</p>
+      </div>
+      <div class="song-menu-trigger relative p-2 text-slate-400 hover:text-white transition-colors">
+          <i class="fas fa-ellipsis-h"></i>
+      </div>
+    `;
+
+            // Click pada item lagu untuk memutar
             songElement.addEventListener("click", () => playSong(index));
+
+            // Click pada tombol titik tiga untuk membuka menu
+            const menuTrigger = songElement.querySelector(".song-menu-trigger");
+            menuTrigger.addEventListener("click", (e) =>
+              toggleSongMenu(e, index)
+            );
 
             songList.appendChild(songElement);
           });
+
+          highlightActiveSong();
         }
 
         async function clearLibrary() {
@@ -609,34 +641,38 @@
         function playSong(index) {
           if (index < 0 || index >= songs.length) return;
 
+          showLoading(); // Tampilkan loader saat lagu berganti
+
           currentSongIndex = index;
           const song = songs[currentSongIndex];
 
           // Update audio source
           audio.src = song.url;
 
-          // Update UI
-          nowPlayingTitle.textContent = song.name.replace(/\.[^/.]+$/, "");
+          // Formatting & Truncation Judul Lagu
+          const cleanTitle = song.name.replace(/\.[^/.]+$/, "");
+
+          // Set teks judul, tambahkan class Tailwind untuk truncation, dan tambahkan tooltip 'title'
+          nowPlayingTitle.textContent = cleanTitle;
+          nowPlayingTitle.className =
+            "text-lg font-semibold max-w-full block truncate";
+          nowPlayingTitle.setAttribute("title", cleanTitle); // Menampilkan tooltip nama lengkap saat di-hover
+
           nowPlayingArtist.textContent = "Local file";
 
-          // Highlight current song in list
-          const songElements = songList.querySelectorAll("div");
-          songElements.forEach((el, i) => {
-            if (i === currentSongIndex) {
-              el.classList.add("bg-slate-700");
-            } else {
-              el.classList.remove("bg-slate-700");
-            }
-          });
+          visualize(); // Reset visualisasi saat memulai lagu baru
 
-          // Play the song
+          highlightActiveSong(); // Tandai lagu aktif di playlist UI
+
+          // Play audio
           audio
             .play()
             .then(() => {
               isPlaying = true;
               playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+              hideLoading();
 
-              // Start visualization if not already running
+              // Inisialisasi Audio Context & jalankan visualizer
               if (!audioContext) {
                 setupAudioContext();
               } else {
@@ -645,7 +681,7 @@
             })
             .catch((error) => {
               console.error("Playback failed:", error);
-              alert("Playback failed. Please try again.");
+              hideLoading();
             });
         }
 
@@ -660,6 +696,7 @@
           if (isPlaying) {
             audio.pause();
             playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+            visualize(); // Reset visualisasi saat lagu dipause
           } else {
             audio
               .play()
@@ -778,6 +815,167 @@
             parseFloat(volumeControl.value) + 0.1
           );
           updateVolume();
+        }
+
+        function highlightActiveSong() {
+          const songElements = songList.querySelectorAll(".song-item");
+
+          songElements.forEach((el, i) => {
+            if (i === currentSongIndex) {
+              // Style untuk lagu yang sedang diputar (Background lebih gelap + efek ring/border)
+              el.classList.add(
+                "bg-slate-700",
+                "border-l-4",
+                "border-purple-500",
+                "pl-2"
+              );
+              el.classList.remove("hover:bg-slate-700/50");
+            } else {
+              // Kembalikan ke style normal untuk lagu lainnya
+              el.classList.remove(
+                "bg-slate-700",
+                "border-l-4",
+                "border-purple-500",
+                "pl-2"
+              );
+              el.classList.add("hover:bg-slate-700/50");
+            }
+          });
+        }
+
+        async function deleteSongFromDB(id) {
+          const db = await openDB();
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction(STORE_NAME, "readwrite");
+            const store = tx.objectStore(STORE_NAME);
+            const request = store.delete(id);
+
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+          });
+        }
+
+        // Helper untuk menutup semua pop-up menu yang sedang terbuka
+        function closeAllSongMenus() {
+          document
+            .querySelectorAll(".song-menu-popup")
+            .forEach((menu) => menu.remove());
+        }
+
+        // Global listener: Klik di luar menu akan menutup pop-up
+        document.addEventListener("click", function (e) {
+          if (
+            !e.target.closest(".song-menu-trigger") &&
+            !e.target.closest(".song-menu-popup")
+          ) {
+            closeAllSongMenus();
+          }
+        });
+
+        /**
+         * 1. Logika Toggle & Render Menu Pop-up
+         */
+        function toggleSongMenu(event, index) {
+          event.stopPropagation(); // Cegah event click memicu playSong(index)
+
+          const container = event.currentTarget;
+          const existingMenu = container.querySelector(".song-menu-popup");
+
+          // Jika menu sudah terbuka di elemen ini, tutup menu
+          if (existingMenu) {
+            existingMenu.remove();
+            return;
+          }
+
+          // Tutup menu terbuka lainnya di daftar lagu
+          closeAllSongMenus();
+
+          // Render elemen Menu Pop-up
+          const menuEl = document.createElement("div");
+          menuEl.className =
+            "song-menu-popup absolute right-0 top-8 z-20 w-44 bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 text-sm text-slate-200";
+
+          songMenuOptions.forEach((option) => {
+            const itemEl = document.createElement("button");
+            itemEl.type = "button";
+            itemEl.className = `w-full text-left px-4 py-2 flex items-center space-x-2 transition-colors ${
+              option.danger
+                ? "hover:bg-red-500/20 text-red-400"
+                : "hover:bg-slate-700"
+            }`;
+            itemEl.innerHTML = `<i class="${option.icon}"></i><span>${option.label}</span>`;
+
+            itemEl.addEventListener("click", (e) => {
+              e.stopPropagation();
+              closeAllSongMenus();
+              option.action(index); // Panggil fungsi aksi berdasarkan data
+            });
+
+            menuEl.appendChild(itemEl);
+          });
+
+          container.appendChild(menuEl);
+        }
+
+        /**
+         * 2. Logika Menghapus 1 Lagu (IndexedDB + Memory + UI)
+         */
+        async function deleteSingleSong(index) {
+          if (index < 0 || index >= songs.length) return;
+
+          const songToDelete = songs[index];
+
+          // Confirm dialog opsional untuk mencegah ketidaksengajaan
+          if (!confirm(`Hapus "${songToDelete.name}" dari library?`)) return;
+
+          try {
+            // A. Hapus dari IndexedDB (jika memiliki ID)
+            if (songToDelete.id) {
+              await deleteSongFromDB(songToDelete.id);
+            }
+
+            // B. Revoke URL Blob dari memori browser
+            if (songToDelete.url) {
+              URL.revokeObjectURL(songToDelete.url);
+            }
+
+            // C. Penanganan jika lagu yang dihapus sedang diputar atau aktif
+            if (index === currentSongIndex) {
+              audio.pause();
+              isPlaying = false;
+              playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+
+              // Hapus lagu dari array
+              songs.splice(index, 1);
+
+              if (songs.length > 0) {
+                // Putar lagu berikutnya (atau lagu terakhir jika yang dihapus adalah lagu paling akhir)
+                const nextIndex = index >= songs.length ? 0 : index;
+                playSong(nextIndex);
+              } else {
+                // Reset player jika library menjadi kosong
+                currentSongIndex = -1;
+                nowPlayingTitle.textContent = "No song selected";
+                nowPlayingArtist.textContent = "-";
+                currentTimeEl.textContent = "0:00";
+                durationEl.textContent = "0:00";
+                progressBar.style.width = "0%";
+                hideLoading();
+              }
+            } else {
+              // Sesuaikan currentSongIndex jika lagu yang dihapus berada di depan lagu yang sedang diputar
+              if (index < currentSongIndex) {
+                currentSongIndex--;
+              }
+              songs.splice(index, 1);
+            }
+
+            // D. Update tampilan playlist
+            updateSongList();
+          } catch (error) {
+            console.error("Gagal menghapus lagu:", error);
+            alert("Gagal menghapus lagu.");
+          }
         }
 
         // Keyboard shortcuts
