@@ -365,9 +365,17 @@
         // Data Preset EQ (Scalable: Cukup tambah preset baru di objek ini)
         const eqPresets = {
           flat: { name: "Flat", low: 0, mid: 0, high: 0 },
-          bass: { name: "Bass Boost", low: 12, mid: -1, high: -3 }, // Nilai diperjelas
-          pop: { name: "Pop", low: 3, mid: 6, high: 4 },
-          rock: { name: "Rock", low: 7, mid: -3, high: 6 },
+          bass: { name: "Bass Boost", low: 9, mid: 0, high: -2 },
+          pop: { name: "Pop", low: 2, mid: 5, high: 3 },
+          rock: { name: "Rock", low: 5, mid: -2, high: 4 },
+
+          // PRESET BARU (Meniru FxSound pada Gambar)
+          superBassFx: {
+            name: "FxSound Super Bass",
+            low: 11, // Combined: 62Hz & 125Hz (+3dB) + Slider Bass Boost 6 (+8dB) = +11dB
+            mid: 1, // Combined: 500Hz-1kHz (+1dB s/d -1dB) + Dynamic Boost 2
+            high: -1, // Combined: 2kHz-8kHz (-1dB)
+          },
         };
 
         let currentPresetKey = "flat";
