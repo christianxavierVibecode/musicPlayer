@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HarmonyStream - Local Music Player</title>
+    <link rel="icon" href="logo.png" type="image/png" />
+    <script src="tailwind.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      /* Custom scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #1e293b;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #475569;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+      }
+
+      /* Waveform animation */
+      @keyframes wave {
+        0% {
+          height: 10px;
+        }
+        50% {
+          height: 20px;
+        }
+        100% {
+          height: 10px;
+        }
+      }
+      .wave-bar {
+        animation: wave 1.2s ease infinite;
+      }
+      .wave-bar:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+      .wave-bar:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+      .wave-bar:nth-child(4) {
+        animation-delay: 0.6s;
+      }
+      .wave-bar:nth-child(5) {
+        animation-delay: 0.8s;
+      }
+
+      /* Custom file input */
+      .file-input {
+        opacity: 0;
+        width: 0.1px;
+        height: 0.1px;
+        position: absolute;
+      }
+    </style>
+  </head>
+  <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-slate-800 shadow-lg p-4 sticky top-0 z-10">
+      <div class="container mx-auto flex justify-between items-center">
+        <div class="flex items-center space-x-2">
+          <i class="fas fa-music text-purple-500 text-2xl"></i>
+          <h1
+            class="text-xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent"
+          >
+            HarmonyStream
+          </h1>
+        </div>
+        <div class="flex items-center space-x-4">
+          <label
+            for="file-upload"
+            class="cursor-pointer bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-full flex items-center space-x-2 transition-colors"
+          >
+            <i class="fas fa-plus"></i>
+            <span>Add Music</span>
+          </label>
+          <input
+            type="file"
+            id="file-upload"
+            class="file-input"
+            accept="audio/*"
+            multiple
+          />
+          <button
+            id="clear-library"
+            class="text-slate-300 hover:text-white transition-colors"
+          >
+            <i class="fas fa-trash-alt"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main
+      class="flex-grow container mx-auto p-4 flex flex-col md:flex-row gap-6"
+    >
+      <!-- Music List -->
+      <div
+        class="w-full md:w-1/3 bg-slate-800 rounded-xl shadow-lg overflow-hidden"
+      >
+        <div class="p-4 border-b border-slate-700">
+          <h2 class="text-lg font-semibold flex items-center space-x-2">
+            <i class="fas fa-list-ul text-purple-500"></i>
+            <span>Your Library</span>
+            <span
+              id="song-count"
+              class="ml-auto bg-slate-700 px-2 py-1 rounded-full text-xs"
+              >0 songs</span
+            >
+          </h2>
+        </div>
+        <div id="song-list" class="overflow-y-auto max-h-[calc(100vh-250px)]">
+          <div class="p-4 text-center text-slate-400">
+            <i class="fas fa-music text-3xl mb-2"></i>
+            <p>No songs in your library</p>
+            <p class="text-sm mt-2">Click "Add Music" to upload your songs</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Player Section -->
+      <div
+        class="w-full md:w-2/3 bg-slate-800 rounded-xl shadow-lg overflow-hidden flex flex-col"
+      >
+        <!-- Now Playing Section -->
+        <div class="p-6 border-b border-slate-700">
+          <div class="flex items-center space-x-4">
+            <!-- Album Art & Spinner Container -->
+            <div
+              id="album-art"
+              class="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-purple-600 to-pink-600 rounded-lg flex items-center justify-center relative"
+            >
+              <!-- Icon Musik bawaan -->
+              <i id="music-icon" class="fas fa-music text-white text-xl"></i>
+
+              <!-- Spinner Loader (Disembunyikan secara bawaan menggunakan class 'hidden') -->
+              <div
+                id="loading-spinner"
+                class="hidden absolute inset-0 bg-slate-900/60 rounded-lg flex items-center justify-center"
+              >
+                <i class="fas fa-spinner fa-spin text-purple-400 text-2xl"></i>
+              </div>
+            </div>
+
+            <div class="flex-grow">
+              <h2 id="now-playing-title" class="text-lg font-semibold truncate">
+                No song selected
+              </h2>
+              <p id="now-playing-artist" class="text-slate-400 text-sm">-</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Waveform Visualization -->
+        <div class="p-4 flex justify-center items-center space-x-2 h-16">
+          <div id="waveform" class="flex items-end space-x-1 h-full">
+            <div
+              class="wave-bar w-2 bg-purple-500 rounded-full"
+              style="height: 10px"
+            ></div>
+            <div
+              class="wave-bar w-2 bg-purple-500 rounded-full"
+              style="height: 15px"
+            ></div>
+            <div
+              class="wave-bar w-2 bg-purple-500 rounded-full"
+              style="height: 20px"
+            ></div>
+            <div
+              class="wave-bar w-2 bg-purple-500 rounded-full"
+              style="height: 15px"
+            ></div>
+            <div
+              class="wave-bar w-2 bg-purple-500 rounded-full"
+              style="height: 10px"
+            ></div>
+          </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="px-6 pb-2">
+          <div class="flex justify-between text-xs text-slate-400 mb-1">
+            <span id="current-time">0:00</span>
+            <span id="duration">0:00</span>
+          </div>
+          <div class="h-2 bg-slate-700 rounded-full cursor-pointer">
+            <div
+              id="progress-bar"
+              class="h-full bg-purple-600 rounded-full w-0"
+            ></div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="p-6 flex flex-col items-center">
+          <div class="flex items-center justify-center space-x-6 mb-4">
+            <button
+              id="shuffle"
+              class="text-slate-400 hover:text-purple-500 text-xl transition-colors"
+            >
+              <i class="fas fa-random"></i>
+            </button>
+            <button
+              id="prev"
+              class="text-white hover:text-purple-500 text-2xl transition-colors"
+            >
+              <i class="fas fa-step-backward"></i>
+            </button>
+            <button
+              id="play-pause"
+              class="bg-purple-600 hover:bg-purple-700 w-12 h-12 rounded-full flex items-center justify-center text-white text-2xl transition-colors"
+            >
+              <i class="fas fa-play"></i>
+            </button>
+            <button
+              id="next"
+              class="text-white hover:text-purple-500 text-2xl transition-colors"
+            >
+              <i class="fas fa-step-forward"></i>
+            </button>
+            <button
+              id="repeat"
+              class="text-slate-400 hover:text-purple-500 text-xl transition-colors"
+            >
+              <i class="fas fa-redo"></i>
+            </button>
+          </div>
+          <div class="flex items-center space-x-4 w-full">
+            <button id="volume-down" class="text-slate-400 hover:text-white">
+              <i class="fas fa-volume-down"></i>
+            </button>
+            <input
+              type="range"
+              id="volume"
+              min="0"
+              max="1"
+              step="0.01"
+              value="0.7"
+              class="w-full h-1 bg-slate-600 rounded-lg appearance-none cursor-pointer"
+            />
+            <button id="volume-up" class="text-slate-400 hover:text-white">
+              <i class="fas fa-volume-up"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      // Nama database & store IndexedDB
+      const DB_NAME = "HarmonyStreamDB";
+      const DB_VERSION = 1;
+      const STORE_NAME = "songs";
+
+      // Helper untuk membuka / membuat database IndexedDB
+      function openDB() {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open(DB_NAME, DB_VERSION); // Membuka koneksi ke IndexedDB
+
+          request.onupgradeneeded = (e) => {
+            // Jika versi database baru, buat object store
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+              // Gunakan 'id' auto increment sebagai primary key
+              db.createObjectStore(STORE_NAME, {
+                keyPath: "id",
+                autoIncrement: true,
+              });
+            }
+          };
+
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async function loadSongsFromIndexedDB() {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_NAME, "readonly");
+          const store = tx.objectStore(STORE_NAME);
+          const request = store.getAll();
+
+          request.onsuccess = () => resolve(request.result || []);
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async function saveSongToDB(songData) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_NAME, "readwrite");
+          const store = tx.objectStore(STORE_NAME);
+          const request = store.add(songData);
+
+          request.onsuccess = () => resolve(request.result); // Mengembalikan ID yang baru dibuat
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      async function clearSongsFromDB() {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_NAME, "readwrite");
+          const store = tx.objectStore(STORE_NAME);
+          const request = store.clear();
+
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        // Audio context and elements
+        const audio = new Audio();
+        let audioContext, analyser, dataArray;
+        let songs = JSON.parse(localStorage.getItem("songs")) || [];
+        let currentSongIndex = -1;
+        let isPlaying = false;
+        let isShuffle = false;
+        let isRepeat = false;
+
+        // DOM elements
+        const fileUpload = document.getElementById("file-upload");
+        const clearLibraryBtn = document.getElementById("clear-library");
+        const songList = document.getElementById("song-list");
+        const songCount = document.getElementById("song-count");
+        const nowPlayingTitle = document.getElementById("now-playing-title");
+        const loadingSpinner = document.getElementById("loading-spinner");
+        const nowPlayingArtist = document.getElementById("now-playing-artist");
+        const albumArt = document.getElementById("album-art");
+        const playPauseBtn = document.getElementById("play-pause");
+        const prevBtn = document.getElementById("prev");
+        const nextBtn = document.getElementById("next");
+        const shuffleBtn = document.getElementById("shuffle");
+        const repeatBtn = document.getElementById("repeat");
+        const progressBar = document.getElementById("progress-bar");
+        const currentTimeEl = document.getElementById("current-time");
+        const durationEl = document.getElementById("duration");
+        const volumeControl = document.getElementById("volume");
+        const volumeDownBtn = document.getElementById("volume-down");
+        const volumeUpBtn = document.getElementById("volume-up");
+        const waveform = document.getElementById("waveform");
+
+        // Initialize the app
+        init();
+
+        async function init() {
+          try {
+            // 1. Ambil semua lagu dari IndexedDB
+            songs = await loadSongsFromIndexedDB();
+
+            // 2. Buat Blob URL sementara untuk tiap lagu di dalam memori
+            songs.forEach((song) => {
+              song.url = URL.createObjectURL(song.file);
+            });
+
+            // 3. Render daftar lagu & pasang Event Listener
+            updateSongList();
+            setupEventListeners();
+
+            // 4. Muat preferensi volume dari localStorage (jika ada)
+            const savedVolume = localStorage.getItem("harmony_volume");
+            if (savedVolume !== null) {
+              volumeControl.value = savedVolume;
+              audio.volume = parseFloat(savedVolume);
+            }
+          } catch (error) {
+            console.error("Gagal memuat lagu dari IndexedDB:", error);
+          }
+
+          // Listener aktifkan audioContext pada klik pertama pengguna
+          document.body.addEventListener(
+            "click",
+            function () {
+              if (!audioContext) {
+                setupAudioContext();
+              }
+            },
+            { once: true }
+          );
+        }
+
+        function setupAudioContext() {
+          audioContext = new (window.AudioContext ||
+            window.webkitAudioContext)();
+          analyser = audioContext.createAnalyser();
+          analyser.fftSize = 32;
+          const source = audioContext.createMediaElementSource(audio);
+          source.connect(analyser);
+          analyser.connect(audioContext.destination);
+
+          dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+          // Start visualization
+          visualize();
+        }
+
+        function visualize() {
+          if (!analyser) return;
+
+          analyser.getByteFrequencyData(dataArray);
+
+          // Clear previous waveform
+          waveform.innerHTML = "";
+
+          // Create new bars based on frequency data
+          for (let i = 0; i < 5; i++) {
+            const value = dataArray[i] || 0;
+            const height = (value / 255) * 50 + 5;
+            const bar = document.createElement("div");
+            bar.className = "wave-bar w-2 bg-purple-500 rounded-full";
+            bar.style.height = `${height}px`;
+            bar.style.animationDelay = `${i * 0.2}s`;
+            waveform.appendChild(bar);
+          }
+
+          if (isPlaying) {
+            requestAnimationFrame(visualize);
+          }
+        }
+
+        function setupEventListeners() {
+          // File upload
+          fileUpload.addEventListener("change", handleFileUpload);
+
+          // Tampilkan spinner saat lagu mulai memuat data audio
+          audio.addEventListener("loadstart", showLoading);
+
+          // Tampilkan spinner jika audio buffering/terhenti sejenak di tengah jalan
+          audio.addEventListener("waiting", showLoading);
+
+          // Sembunyikan spinner saat lagu sudah siap diputar
+          audio.addEventListener("canplay", hideLoading);
+
+          // Sembunyikan spinner jika terjadi kesalahan saat pemuatan audio
+          audio.addEventListener("error", hideLoading);
+
+          // Clear library
+          clearLibraryBtn.addEventListener("click", clearLibrary);
+
+          // Player controls
+          playPauseBtn.addEventListener("click", togglePlayPause);
+          prevBtn.addEventListener("click", playPrevious);
+          nextBtn.addEventListener("click", playNext);
+          shuffleBtn.addEventListener("click", toggleShuffle);
+          repeatBtn.addEventListener("click", toggleRepeat);
+
+          // Progress bar
+          progressBar.parentElement.addEventListener("click", seekAudio);
+          audio.addEventListener("timeupdate", updateProgress);
+          audio.addEventListener("loadedmetadata", updateDuration);
+          audio.addEventListener("ended", handleSongEnd);
+
+          // Volume controls
+          volumeControl.addEventListener("input", updateVolume);
+          volumeDownBtn.addEventListener("click", decreaseVolume);
+          volumeUpBtn.addEventListener("click", increaseVolume);
+
+          // Set initial volume
+          audio.volume = volumeControl.value;
+        }
+
+        async function handleFileUpload(e) {
+          const files = e.target.files;
+          if (!files.length) return;
+
+          for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+
+            // Cek jika lagu dengan nama yang sama sudah ada
+            if (songs.some((song) => song.name === file.name)) {
+              continue;
+            }
+
+            const songData = {
+              name: file.name,
+              file: file, // Objek File disimpan langsung sebagai Blob di IndexedDB
+            };
+
+            // Simpan ke IndexedDB dan dapatkan ID-nya
+            const newId = await saveSongToDB(songData);
+
+            // Buat Blob URL sementara untuk runtime memori
+            songData.id = newId;
+            songData.url = URL.createObjectURL(file);
+
+            songs.push(songData);
+          }
+
+          // Update UI
+          updateSongList();
+
+          // Jika belum ada lagu yang diputar, putar lagu pertama
+          if (currentSongIndex === -1 && songs.length > 0) {
+            playSong(0);
+          }
+
+          // Reset input file
+          e.target.value = "";
+        }
+
+        // Helper function untuk menampilkan spinner
+        function showLoading() {
+          if (loadingSpinner) {
+            loadingSpinner.classList.remove("hidden");
+          }
+        }
+
+        // Helper function untuk menyembunyikan spinner
+        function hideLoading() {
+          if (loadingSpinner) {
+            loadingSpinner.classList.add("hidden");
+          }
+        }
+
+        function updateSongList() {
+          if (songs.length === 0) {
+            songList.innerHTML = `
+                              <div class="p-4 text-center text-slate-400">
+                                  <i class="fas fa-music text-3xl mb-2"></i>
+                                  <p>No songs in your library</p>
+                                  <p class="text-sm mt-2">Click "Add Music" to upload your songs</p>
+                              </div>
+                          `;
+            songCount.textContent = "0 songs";
+            return;
+          }
+
+          songList.innerHTML = "";
+          songCount.textContent = `${songs.length} ${
+            songs.length === 1 ? "song" : "songs"
+          }`;
+
+          songs.forEach((song, index) => {
+            const songElement = document.createElement("div");
+            songElement.className = `flex items-center p-3 hover:bg-slate-700 cursor-pointer transition-colors ${
+              currentSongIndex === index ? "bg-slate-700" : ""
+            }`;
+            songElement.innerHTML = `
+                              <div class="w-10 h-10 rounded bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center mr-3">
+                                  <i class="fas fa-music text-white"></i>
+                              </div>
+                              <div class="flex-grow min-w-0">
+                                  <h3 class="font-medium truncate">${song.name.replace(
+                                    /\.[^/.]+$/,
+                                    ""
+                                  )}</h3>
+                                  <p class="text-xs text-slate-400 truncate">Local file</p>
+                              </div>
+                              <div class="text-slate-400">
+                                  <i class="fas fa-ellipsis-h"></i>
+                              </div>
+                          `;
+
+            songElement.addEventListener("click", () => playSong(index));
+
+            songList.appendChild(songElement);
+          });
+        }
+
+        async function clearLibrary() {
+          if (songs.length === 0) return;
+
+          if (
+            confirm(
+              "Apakah Anda yakin ingin menghapus semua lagu? Tindakan ini tidak dapat dibatalkan."
+            )
+          ) {
+            // 1. Revoke semua Object URL di memori
+            songs.forEach((song) => {
+              URL.revokeObjectURL(song.url);
+            });
+
+            // 2. Hapus data di IndexedDB
+            await clearSongsFromDB();
+
+            // 3. Hentikan lagu jika sedang berjalan
+            if (isPlaying) {
+              audio.pause();
+              isPlaying = false;
+              playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+            }
+
+            // 4. Reset variabel dan tampilan UI
+            songs = [];
+            currentSongIndex = -1;
+
+            updateSongList();
+            nowPlayingTitle.textContent = "No song selected";
+            nowPlayingArtist.textContent = "-";
+            currentTimeEl.textContent = "0:00";
+            durationEl.textContent = "0:00";
+            progressBar.style.width = "0%";
+            hideLoading();
+          }
+        }
+
+        function playSong(index) {
+          if (index < 0 || index >= songs.length) return;
+
+          currentSongIndex = index;
+          const song = songs[currentSongIndex];
+
+          // Update audio source
+          audio.src = song.url;
+
+          // Update UI
+          nowPlayingTitle.textContent = song.name.replace(/\.[^/.]+$/, "");
+          nowPlayingArtist.textContent = "Local file";
+
+          // Highlight current song in list
+          const songElements = songList.querySelectorAll("div");
+          songElements.forEach((el, i) => {
+            if (i === currentSongIndex) {
+              el.classList.add("bg-slate-700");
+            } else {
+              el.classList.remove("bg-slate-700");
+            }
+          });
+
+          // Play the song
+          audio
+            .play()
+            .then(() => {
+              isPlaying = true;
+              playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+
+              // Start visualization if not already running
+              if (!audioContext) {
+                setupAudioContext();
+              } else {
+                visualize();
+              }
+            })
+            .catch((error) => {
+              console.error("Playback failed:", error);
+              alert("Playback failed. Please try again.");
+            });
+        }
+
+        function togglePlayPause() {
+          if (songs.length === 0) return;
+
+          if (currentSongIndex === -1) {
+            playSong(0);
+            return;
+          }
+
+          if (isPlaying) {
+            audio.pause();
+            playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+          } else {
+            audio
+              .play()
+              .then(() => {
+                playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                if (!audioContext) {
+                  setupAudioContext();
+                } else {
+                  visualize();
+                }
+              })
+              .catch((error) => {
+                console.error("Playback failed:", error);
+                alert("Playback failed. Please try again.");
+              });
+          }
+
+          isPlaying = !isPlaying;
+        }
+
+        function playPrevious() {
+          if (songs.length === 0) return;
+
+          let newIndex;
+          if (isShuffle) {
+            newIndex = Math.floor(Math.random() * songs.length);
+          } else {
+            newIndex = currentSongIndex - 1;
+            if (newIndex < 0) newIndex = songs.length - 1;
+          }
+
+          playSong(newIndex);
+        }
+
+        function playNext() {
+          if (songs.length === 0) return;
+
+          let newIndex;
+          if (isShuffle) {
+            newIndex = Math.floor(Math.random() * songs.length);
+          } else {
+            newIndex = currentSongIndex + 1;
+            if (newIndex >= songs.length) newIndex = 0;
+          }
+
+          playSong(newIndex);
+        }
+
+        function handleSongEnd() {
+          if (isRepeat) {
+            audio.currentTime = 0;
+            audio.play();
+          } else {
+            playNext();
+          }
+        }
+
+        function toggleShuffle() {
+          isShuffle = !isShuffle;
+          shuffleBtn.classList.toggle("text-purple-500", isShuffle);
+          shuffleBtn.classList.toggle("text-slate-400", !isShuffle);
+        }
+
+        function toggleRepeat() {
+          isRepeat = !isRepeat;
+          repeatBtn.classList.toggle("text-purple-500", isRepeat);
+          repeatBtn.classList.toggle("text-slate-400", !isRepeat);
+        }
+
+        function seekAudio(e) {
+          if (!audio.duration) return;
+          const progressContainer = e.currentTarget;
+          const rect = progressContainer.getBoundingClientRect();
+          const clickX = e.clientX - rect.left;
+          const width = rect.width;
+          const percentage = clickX / width;
+          audio.currentTime = percentage * audio.duration;
+        }
+
+        function updateProgress() {
+          const { currentTime, duration } = audio;
+          const progressPercent = (currentTime / duration) * 100;
+          progressBar.style.width = `${progressPercent}%`;
+
+          // Update time display
+          currentTimeEl.textContent = formatTime(currentTime);
+        }
+
+        function updateDuration() {
+          durationEl.textContent = formatTime(audio.duration);
+        }
+
+        function formatTime(seconds) {
+          const mins = Math.floor(seconds / 60);
+          const secs = Math.floor(seconds % 60);
+          return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+        }
+
+        function updateVolume() {
+          audio.volume = volumeControl.value;
+          // Simpan nilai volume ke localStorage
+          localStorage.setItem("harmony_volume", volumeControl.value);
+        }
+
+        function decreaseVolume() {
+          volumeControl.value = Math.max(
+            0,
+            parseFloat(volumeControl.value) - 0.1
+          );
+          updateVolume();
+        }
+
+        function increaseVolume() {
+          volumeControl.value = Math.min(
+            1,
+            parseFloat(volumeControl.value) + 0.1
+          );
+          updateVolume();
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener("keydown", function (e) {
+          if (e.code === "Space") {
+            e.preventDefault();
+            togglePlayPause();
+          } else if (e.code === "ArrowLeft") {
+            audio.currentTime = Math.max(0, audio.currentTime - 5);
+          } else if (e.code === "ArrowRight") {
+            audio.currentTime = Math.min(audio.duration, audio.currentTime + 5);
+          } else if (e.code === "ArrowUp") {
+            increaseVolume();
+          } else if (e.code === "ArrowDown") {
+            decreaseVolume();
+            // } else if (e.ctrlKey && e.key === "Delete") {
+            //   e.preventDefault();
+          } else if (e.ctrlKey && e.key === "Enter") {
+            e.preventDefault();
+            clearLibraryBtn.click();
+            fileUpload.click();
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
