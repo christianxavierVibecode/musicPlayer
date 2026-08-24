@@ -210,30 +210,59 @@
             >
               <i class="fas fa-random"></i>
             </button>
+
             <button
               id="prev"
               class="text-white hover:text-purple-500 text-2xl transition-colors"
             >
               <i class="fas fa-step-backward"></i>
             </button>
+
             <button
               id="play-pause"
               class="bg-purple-600 hover:bg-purple-700 w-12 h-12 rounded-full flex items-center justify-center text-white text-2xl transition-colors"
             >
               <i class="fas fa-play"></i>
             </button>
+
             <button
               id="next"
               class="text-white hover:text-purple-500 text-2xl transition-colors"
             >
               <i class="fas fa-step-forward"></i>
             </button>
+
             <button
               id="repeat"
               class="text-slate-400 hover:text-purple-500 text-xl transition-colors"
             >
               <i class="fas fa-redo"></i>
             </button>
+
+            <!-- TOMBOL BARU: Equalizer Menu -->
+            <div class="relative inline-block">
+              <button
+                id="eq-menu-btn"
+                class="text-slate-400 hover:text-purple-500 text-xl transition-colors p-1"
+                title="Equalizer Presets"
+              >
+                <i class="fas fa-sliders-h"></i>
+                <!-- Menggunakan icon sliders agar beda dari icon ellipsis playlist -->
+              </button>
+
+              <!-- Pop-up Menu Presets -->
+              <div
+                id="eq-popup"
+                class="hidden absolute right-0 bottom-10 z-30 w-36 bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 text-sm text-slate-200"
+              >
+                <div
+                  class="px-3 py-1 text-xs font-semibold text-slate-400 border-b border-slate-700"
+                >
+                  EQ Presets
+                </div>
+                <div id="eq-preset-list"></div>
+              </div>
+            </div>
           </div>
           <div class="flex items-center space-x-4 w-full">
             <button id="volume-down" class="text-slate-400 hover:text-white">
@@ -330,6 +359,38 @@
         let isShuffle = false;
         let isRepeat = false;
 
+        // Variabel Filter Web Audio API
+        let lowFilter, midFilter, highFilter;
+
+        // Data Preset EQ (Scalable: Cukup tambah preset baru di objek ini)
+        const eqPresets = {
+          flat: { name: "Flat", low: 0, mid: 0, high: 0 },
+          bass: { name: "Bass Boost", low: 12, mid: -1, high: -3 }, // Nilai diperjelas
+          pop: { name: "Pop", low: 3, mid: 6, high: 4 },
+          rock: { name: "Rock", low: 7, mid: -3, high: 6 },
+        };
+
+        let currentPresetKey = "flat";
+
+        // Fungsi untuk memperbarui preset yang aktif
+        function applyEQPreset(presetKey) {
+          if (!eqPresets[presetKey]) return;
+          currentPresetKey = presetKey;
+
+          const { low, mid, high } = eqPresets[presetKey];
+
+          if (lowFilter && audioContext) {
+            const now = audioContext.currentTime;
+            // Transisi perubahan frekuensi secara halus (smooth 0.1s)
+            lowFilter.gain.setTargetAtTime(low, now, 0.1);
+            midFilter.gain.setTargetAtTime(mid, now, 0.1);
+            highFilter.gain.setTargetAtTime(high, now, 0.1);
+          }
+
+          // Simpan preferensi ke localStorage
+          localStorage.setItem("harmony_eq_preset", presetKey);
+        }
+
         // DOM elements
         const fileUpload = document.getElementById("file-upload");
         const clearLibraryBtn = document.getElementById("clear-library");
@@ -399,19 +460,40 @@
             { once: true }
           );
         }
-
         function setupAudioContext() {
           audioContext = new (window.AudioContext ||
             window.webkitAudioContext)();
           analyser = audioContext.createAnalyser();
           analyser.fftSize = 32;
+
+          // 1. Inisialisasi BiquadFilterNode (Gunakan variabel yang sudah dideklarasikan di luar)
+          lowFilter = audioContext.createBiquadFilter();
+          lowFilter.type = "lowshelf";
+          lowFilter.frequency.value = 250; // Bass
+
+          midFilter = audioContext.createBiquadFilter();
+          midFilter.type = "peaking";
+          midFilter.frequency.value = 1000; // Mid
+          midFilter.Q.value = 1;
+
+          highFilter = audioContext.createBiquadFilter();
+          highFilter.type = "highshelf";
+          highFilter.frequency.value = 4000; // Treble
+
+          // 2. Hubungkan Rantai Audio (Source -> Low -> Mid -> High -> Analyser -> Speakers)
           const source = audioContext.createMediaElementSource(audio);
-          source.connect(analyser);
+          source.connect(lowFilter);
+          lowFilter.connect(midFilter);
+          midFilter.connect(highFilter);
+          highFilter.connect(analyser);
           analyser.connect(audioContext.destination);
 
-          dataArray = new Uint8Array(analyser.frequencyBinCount);
+          // 3. Terapkan preset terakhir yang tersimpan
+          const savedPreset =
+            localStorage.getItem("harmony_eq_preset") || "flat";
+          applyEQPreset(savedPreset);
 
-          // Start visualization
+          dataArray = new Uint8Array(analyser.frequencyBinCount);
           visualize();
         }
 
@@ -484,6 +566,61 @@
 
           // Set initial volume
           audio.volume = volumeControl.value;
+
+          // Render daftar pilihan preset secara dinamis berdasarkan data eqPresets
+          function renderEQMenuItems() {
+            const container = document.getElementById("eq-preset-list");
+            if (!container) return;
+
+            container.innerHTML = "";
+
+            Object.keys(eqPresets).forEach((key) => {
+              const item = eqPresets[key];
+              const isSelected = key === currentPresetKey;
+
+              const btn = document.createElement("button");
+              btn.type = "button";
+              btn.className = `w-full text-left px-4 py-2 flex items-center justify-between transition-colors ${
+                isSelected
+                  ? "bg-purple-600/20 text-purple-400 font-medium"
+                  : "hover:bg-slate-700 text-slate-300"
+              }`;
+
+              btn.innerHTML = `
+                <span>${item.name}</span>
+                ${isSelected ? '<i class="fas fa-check text-xs"></i>' : ""}
+              `;
+
+              btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                applyEQPreset(key);
+                renderEQMenuItems(); // Re-render untuk memperbarui ikon centang
+                document.getElementById("eq-popup").classList.add("hidden");
+              });
+
+              container.appendChild(btn);
+            });
+          }
+
+          // Event Listener Toggle Pop-up
+          const eqMenuBtn = document.getElementById("eq-menu-btn");
+          const eqPopup = document.getElementById("eq-popup");
+
+          eqMenuBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            renderEQMenuItems();
+            eqPopup.classList.toggle("hidden");
+          });
+
+          // Menutup menu saat klik di mana saja di luar area menu
+          document.addEventListener("click", (e) => {
+            if (
+              !e.target.closest("#eq-menu-btn") &&
+              !e.target.closest("#eq-popup")
+            ) {
+              eqPopup.classList.add("hidden");
+            }
+          });
         }
 
         async function handleFileUpload(e) {
