@@ -283,6 +283,207 @@
           </div>
         </div>
       </div>
+
+      <!-- Floating Help Button -->
+      <button
+        id="floatingHelpBtn"
+        class="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-pink-500 font-bold text-white shadow-lg shadow-purple-500/30 transition-all duration-300 hover:scale-110 hover:shadow-pink-500/50 active:scale-95"
+        title="Keyboard Shortcuts (Ctrl + /)"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-6 w-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2.5"
+            d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+      </button>
+
+      <!-- Modal Overlay -->
+      <div
+        id="shortcutModal"
+        class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4 transition-opacity duration-200"
+      >
+        <!-- Modal Card Container dengan Background Gradient -->
+        <div
+          class="w-full max-w-md scale-95 transform overflow-hidden rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 p-0.5 text-white shadow-2xl shadow-purple-500/20 transition-all duration-200"
+          onclick="event.stopPropagation()"
+        >
+          <div class="rounded-[15px] bg-slate-950/90 backdrop-blur-md">
+            <!-- Header -->
+            <div
+              class="flex items-center justify-between border-b border-white/10 bg-gradient-to-r from-purple-500/20 to-pink-500/20 px-5 py-4"
+            >
+              <h3
+                class="flex items-center gap-2 text-base font-semibold tracking-wide text-white"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-5 w-5 text-pink-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+                Keyboard Shortcuts
+              </h3>
+              <button
+                id="closeShortcutBtn"
+                class="rounded-lg p-1 text-slate-400 hover:bg-white/10 hover:text-white transition-colors"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <!-- Body / Shortcut List -->
+            <div class="max-h-[70vh] overflow-y-auto p-5">
+              <div class="space-y-3">
+                <div
+                  class="flex items-center justify-between border-b border-white/5 pb-2.5"
+                >
+                  <span class="text-sm text-slate-200">Play / Pause audio</span>
+                  <kbd
+                    class="rounded border border-purple-400/30 bg-purple-950/60 px-2 py-1 font-mono text-xs font-semibold text-pink-300 shadow-sm"
+                    >Space</kbd
+                  >
+                </div>
+
+                <div
+                  class="flex items-center justify-between border-b border-white/5 pb-2.5"
+                >
+                  <span class="text-sm text-slate-200"
+                    >Mundur / Maju 5 detik</span
+                  >
+                  <div class="flex gap-1">
+                    <kbd
+                      class="rounded border border-purple-400/30 bg-purple-950/60 px-2 py-1 font-mono text-xs font-semibold text-pink-300 shadow-sm"
+                      >←</kbd
+                    >
+                    <kbd
+                      class="rounded border border-purple-400/30 bg-purple-950/60 px-2 py-1 font-mono text-xs font-semibold text-pink-300 shadow-sm"
+                      >→</kbd
+                    >
+                  </div>
+                </div>
+
+                <div
+                  class="flex items-center justify-between border-b border-white/5 pb-2.5"
+                >
+                  <span class="text-sm text-slate-200"
+                    >Menaikkan / Menurunkan volume</span
+                  >
+                  <div class="flex gap-1">
+                    <kbd
+                      class="rounded border border-purple-400/30 bg-purple-950/60 px-2 py-1 font-mono text-xs font-semibold text-pink-300 shadow-sm"
+                      >↑</kbd
+                    >
+                    <kbd
+                      class="rounded border border-purple-400/30 bg-purple-950/60 px-2 py-1 font-mono text-xs font-semibold text-pink-300 shadow-sm"
+                      >↓</kbd
+                    >
+                  </div>
+                </div>
+
+                <div
+                  class="flex items-center justify-between border-b border-white/5 pb-2.5"
+                >
+                  <span class="text-sm text-slate-200"
+                    >Hapus lagu yang sedang diputar</span
+                  >
+                  <div class="flex items-center gap-1">
+                    <kbd
+                      class="rounded border border-purple-400/30 bg-purple-950/60 px-2 py-1 font-mono text-xs font-semibold text-pink-300 shadow-sm"
+                      >Delete</kbd
+                    >
+                    <span class="text-xs text-slate-400">atau</span>
+                    <kbd
+                      class="rounded border border-purple-400/30 bg-purple-950/60 px-2 py-1 font-mono text-xs font-semibold text-pink-300 shadow-sm"
+                      >Ctrl</kbd
+                    >
+                    <span class="text-xs text-slate-400">+</span>
+                    <kbd
+                      class="rounded border border-purple-400/30 bg-purple-950/60 px-2 py-1 font-mono text-xs font-semibold text-pink-300 shadow-sm"
+                      >Del</kbd
+                    >
+                  </div>
+                </div>
+
+                <div
+                  class="flex items-center justify-between border-b border-white/5 pb-2.5"
+                >
+                  <span class="text-sm text-slate-200"
+                    >Clear library & Upload lagu</span
+                  >
+                  <div class="flex items-center gap-1">
+                    <kbd
+                      class="rounded border border-purple-400/30 bg-purple-950/60 px-2 py-1 font-mono text-xs font-semibold text-pink-300 shadow-sm"
+                      >Ctrl</kbd
+                    >
+                    <span class="text-xs text-slate-400">+</span>
+                    <kbd
+                      class="rounded border border-purple-400/30 bg-purple-950/60 px-2 py-1 font-mono text-xs font-semibold text-pink-300 shadow-sm"
+                      >Enter</kbd
+                    >
+                  </div>
+                </div>
+
+                <div
+                  class="flex items-center justify-between border-b border-white/5 pb-2.5"
+                >
+                  <span class="text-sm text-slate-200"
+                    >Buka / Tutup daftar shortcut</span
+                  >
+                  <div class="flex items-center gap-1">
+                    <kbd
+                      class="rounded border border-purple-400/30 bg-purple-950/60 px-2 py-1 font-mono text-xs font-semibold text-pink-300 shadow-sm"
+                      >Ctrl</kbd
+                    >
+                    <span class="text-xs text-slate-400">+</span>
+                    <kbd
+                      class="rounded border border-purple-400/30 bg-purple-950/60 px-2 py-1 font-mono text-xs font-semibold text-pink-300 shadow-sm"
+                      >/</kbd
+                    >
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-slate-200"
+                    >Tutup modal shortcut</span
+                  >
+                  <kbd
+                    class="rounded border border-purple-400/30 bg-purple-950/60 px-2 py-1 font-mono text-xs font-semibold text-pink-300 shadow-sm"
+                    >Esc</kbd
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
 
     <script>
@@ -1122,9 +1323,64 @@
             alert("Gagal menghapus lagu.");
           }
         }
+        const shortcutModal = document.getElementById("shortcutModal");
+        const closeShortcutBtn = document.getElementById("closeShortcutBtn");
+        const floatingHelpBtn = document.getElementById("floatingHelpBtn");
+        const modalContainer = shortcutModal.querySelector(".transform");
 
-        // Keyboard shortcuts
+        // Fungsi Buka / Tutup Modal dengan animasi
+        function toggleShortcutModal() {
+          const isHidden = shortcutModal.classList.contains("hidden");
+
+          if (isHidden) {
+            shortcutModal.classList.remove("hidden");
+            shortcutModal.classList.add("flex");
+            setTimeout(() => {
+              modalContainer.classList.remove("scale-95");
+              modalContainer.classList.add("scale-100");
+            }, 10);
+          } else {
+            modalContainer.classList.remove("scale-100");
+            modalContainer.classList.add("scale-95");
+            setTimeout(() => {
+              shortcutModal.classList.remove("flex");
+              shortcutModal.classList.add("hidden");
+            }, 150);
+          }
+        }
+
+        // Event Listeners Tombol Floating & Close
+        floatingHelpBtn.addEventListener("click", toggleShortcutModal);
+        closeShortcutBtn.addEventListener("click", toggleShortcutModal);
+
+        shortcutModal.addEventListener("click", function () {
+          if (!shortcutModal.classList.contains("hidden")) {
+            toggleShortcutModal();
+          }
+        });
+
+        // Update Listener Keyboard Shortcuts
         document.addEventListener("keydown", function (e) {
+          // Shortcut Buka/Tutup dengan CTRL + /
+          if (e.ctrlKey && e.key === "/") {
+            e.preventDefault();
+            toggleShortcutModal();
+            return;
+          }
+
+          // Tutup dengan Escape
+          if (
+            e.key === "Escape" &&
+            !shortcutModal.classList.contains("hidden")
+          ) {
+            toggleShortcutModal();
+            return;
+          }
+
+          // Abaikan pemutaran audio jika modal terbuka
+          if (!shortcutModal.classList.contains("hidden")) return;
+
+          // --- Keyboard Shortcuts Utama ---
           if (e.code === "Space") {
             e.preventDefault();
             togglePlayPause();
@@ -1136,8 +1392,11 @@
             increaseVolume();
           } else if (e.code === "ArrowDown") {
             decreaseVolume();
-            // } else if (e.ctrlKey && e.key === "Delete") {
-            //   e.preventDefault();
+          } else if (e.key === "Delete" || (e.ctrlKey && e.key === "Delete")) {
+            e.preventDefault();
+            if (typeof currentIndex !== "undefined" && currentIndex !== -1) {
+              deleteSingleSong(currentIndex);
+            }
           } else if (e.ctrlKey && e.key === "Enter") {
             e.preventDefault();
             clearLibraryBtn.click();
