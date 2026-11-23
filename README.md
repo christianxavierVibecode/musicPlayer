@@ -1,7 +1,7 @@
 # HarmonyStream
 
 <p align="center">
-  <img src="assets/harmony-stream-preview.svg" alt="HarmonyStream placeholder preview" width="800">
+  <img src="assets/MusicPlayer.PNG" alt="HarmonyStream placeholder preview" width="800">
 </p>
 
 <p align="center">
