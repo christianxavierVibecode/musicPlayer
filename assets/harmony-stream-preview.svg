@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <rect width="1200" height="675" fill="#0f172a"/>
+  <rect x="70" y="60" width="1060" height="555" rx="28" fill="#1e293b" stroke="#334155" stroke-width="3"/>
+  <circle cx="600" cy="255" r="105" fill="#9333ea"/>
+  <circle cx="600" cy="255" r="72" fill="#ec4899" opacity="0.95"/>
+  <path d="M585 205v92l85-46z" fill="#ffffff"/>
+  <rect x="185" y="420" width="830" height="18" rx="9" fill="#475569"/>
+  <rect x="185" y="420" width="510" height="18" rx="9" fill="#a855f7"/>
+  <circle cx="695" cy="429" r="18" fill="#d8b4fe"/>
+  <text x="600" y="505" text-anchor="middle" fill="#f8fafc" font-family="Arial, Helvetica, sans-serif" font-size="46" font-weight="700">HarmonyStream</text>
+  <text x="600" y="548" text-anchor="middle" fill="#94a3b8" font-family="Arial, Helvetica, sans-serif" font-size="24">Local Music Player — Placeholder Preview</text>
+</svg>
